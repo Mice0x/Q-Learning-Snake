@@ -1,16 +1,34 @@
 import pygame
 import random
-import socket
-import pickle
 import time
+import threading
+import keyboard
+
 
 class SnakeEnv():
     def __init__(self):
         self.green = (0,255,0)
-        self.snakes = []
-    def AddSnake(self):
-        self.Snakes.append()
+        self.yellow = (255, 255, 0)
+        self.blue = (0, 0, 255)
+        pygame.init()
+        self.screen = pygame.display.set_mode((600, 600))
 
+        pygame.display.set_caption('Snake')
+        self.running = True
+        self.food_pos = []
+        self.snakes = []
+        
+        self.snake_properties = []
+        self.keyboard_dir = "Down"
+        self.current_direction = "Down"
+
+    def AddSnake(self, head_color, tail_color):
+        self.snake_properties.append([head_color, tail_color, "Down"])
+
+        x = random.randint(5, 25) * 20
+        y = random.randint(5,25) * 20
+        self.snakes.append([[x,y],[x+20,y]])
+    
     def MapBorder(self):
         border_start = 0
         border_end = 580
@@ -24,11 +42,103 @@ class SnakeEnv():
                                                    border_start, border_thickness, border_end))
         pygame.draw.rect(self.screen, self.green, (border_start,
                                                    border_end, border_end + border_thickness, border_thickness))
+        for i, val in enumerate(self.snakes):
+            HeadPosition = val[-1]
 
-        if not border_end > self.HeadPosition[1] > border_thickness:
-            self.SnakeDead()
-        if not border_end > self.HeadPosition[0] > border_thickness:
-            self.SnakeDead()
+            if not border_end > HeadPosition[1] > border_thickness:
+                self.SnakeDead(i)
+            if not border_end > HeadPosition[0] > border_thickness:
+                self.SnakeDead(i)
+
+    def MoveSnakes(self):
+
+        
+        for i, snake in enumerate(self.snakes):
+            direction = self.snake_properties[i][2]            
+            for index, value in enumerate(snake):
+                try:
+                    snake[index] = [
+                        int(snake[index + 1][0]), int(snake[index + 1][1])]
+                except:
+                    if direction == "Down":
+                        snake[index][1] += 20
+                    if direction == "Up":
+                        snake[index][1] -= 20
+                    if direction == "Left":
+                        snake[index][0] -= 20
+                    if direction == "Right":
+                        snake[index][0] += 20
+            self.current_direction = direction
+    def DrawSnakes(self):
+        for i, val in enumerate(self.snakes):
+            snake = val
+            tail_color = self.snake_properties[i][1]
+            head_color = self.snake_properties[i][0]
+            for index, value in enumerate(snake):
+                try:
+                    next_value = snake[index + 1]
+                    if next_value[0] > value[0]:
+                        pygame.draw.rect(self.screen, tail_color,
+                                        (value[0] - 8, value[1] - 8, 20, 16))
+                    elif next_value[0] < value[0]:
+                        pygame.draw.rect(self.screen, tail_color,
+                                        (value[0] - 12, value[1] - 8, 20, 16))
+                    elif next_value[1] > value[1]:
+                        pygame.draw.rect(self.screen, tail_color,
+                                        (value[0] - 8, value[1] - 8, 16, 20))
+                    elif next_value[1] < value[1]:
+                        pygame.draw.rect(self.screen, tail_color,
+                                        (value[0] - 8, value[1] - 12, 16, 20))
+                except:
+                    pygame.draw.rect(self.screen, head_color,
+                                    (value[0] - 8, value[1] - 8, 16, 16))
+    def KeyPressed(self):
+        if keyboard.is_pressed('w'):
+            print("Left")
+            
+    def GameLoop(self):
+        fps = 10
+        frametime = 1/fps
+        t = time.time()
+        while self.running:
+            
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                key_input = pygame.key.get_pressed()
+                if key_input[pygame.K_UP]:
+                    self.direction = "Up"
+                    print('pressed')
+                elif key_input[pygame.K_DOWN]:
+                    self.direction = "Down"
+                    print('pressed')
+                elif key_input[pygame.K_RIGHT]:
+                    self.direction = "Right"
+                    print('pressed')
+                elif key_input[pygame.K_LEFT]:
+                    self.direction = "Left" 
+                    print('pressed')
+            if time.time() - t >= frametime:
+                self.screen.fill((0, 0, 0))
+                
+                
+                self.MapBorder()
+          
+                self.DrawSnakes()
+                self.MoveSnakes()
+      
+
+                pygame.display.flip()
+                t = time.time()
+    def SnakeDead(self, snake_index):
+        pass
+        # self.snakes[snake_index] = random.randint(5, 25) * 20
+    def Direction(self, snake_index, direction="Keyboard"):
+        if direction != "Keyboard":
+            self.snake_properties[snake_index][2] = direction
+        else:
+            self.snake_properties[snake_index][2] = self.KeyPressed()
+
 class Snake():
     """
     Single/MultiPlayer Snake
@@ -114,7 +224,8 @@ class Snake():
             except:
                 pygame.draw.rect(self.screen, head_color,
                                  (value[0] - 8, value[1] - 8, 16, 16))
-
+    
+    
     def SnakeDead(self):
         self.snake = [[300, 300], [320, 300]]
 
@@ -153,7 +264,7 @@ class Snake():
                 if self.direction == "Right":
                     self.snake[index][0] += 20
         self.current_direction = self.direction
-
+    
     def Food(self):
 
         while not self.food_pos:
@@ -171,8 +282,41 @@ class Snake():
     def GetTailHit(self):
         if self.HeadPosition in self.snake[:-1] or self.HeadPosition in self.enemy_snake:
             self.SnakeDead()
+def on_press(key):
+    try:
+        print('alphanumeric key {0} pressed'.format(
+            key.char))
+    except AttributeError:
+        print('special key {0} pressed'.format(
+            key))
 
-
+def on_release(key):
+    print('{0} released'.format(
+        key))
+    if key == keyboard.Key.esc:
+        # Stop listener
+        return False
+def keyboardInput():
+    listener = keyboard.Listener(
+    on_press=on_press,
+    on_release=on_release)
+    listener.start()
 
 if __name__ == "__main__":
-    Snake()
+    
+    se = SnakeEnv()
+    
+    se.AddSnake([255,255,0],[255,0,255])
+    se.AddSnake([0,255,0],[0,255,255])
+    
+    
+    gl = threading.Thread(target=se.GameLoop, args=())
+    gl.start()
+    
+    while True:
+        print("True")
+        if keyboard.read_key() == "x":
+            pass
+        # se.Direction(0)
+
+

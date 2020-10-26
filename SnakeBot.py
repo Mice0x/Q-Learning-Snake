@@ -2,12 +2,13 @@ import pygame
 import random
 import time
 import threading
-import keyboard
-
+import numpy as np
+from PIL import Image
+from PIL import ImageDraw
 
 class SnakeEnv():
     def __init__(self):
-        self.green = (0,255,0)
+        self.green = (0, 255, 0)
         self.yellow = (255, 255, 0)
         self.blue = (0, 0, 255)
         pygame.init()
@@ -17,18 +18,33 @@ class SnakeEnv():
         self.running = True
         self.food_pos = []
         self.snakes = []
-        
+
         self.snake_properties = []
         self.keyboard_dir = "Down"
         self.current_direction = "Down"
-
+        self.next_frame = False
+        self.reward = 1.0
+        self.data = pygame.image.tostring(self.screen, "RGB")
+        gl = threading.Thread(target=self.GameLoop, args=())
+        gl.start()
+        
     def AddSnake(self, head_color, tail_color):
         self.snake_properties.append([head_color, tail_color, "Down"])
 
         x = random.randint(5, 25) * 20
-        y = random.randint(5,25) * 20
-        self.snakes.append([[x,y],[x+20,y]])
+        y = random.randint(5, 25) * 20
+        self.snakes.append([[x, y], [x+20, y]])
     
+    def GetFrame(self):
+        frame = Image.frombytes("RGB", (600,600), self.data)
+        frame = frame.resize((30,30))
+        frame_array = np.array(frame)
+        output_image = frame_array.tolist()
+        return output_image
+    def GetReward(self):
+        pass
+    def NextFrame(self):
+        self.next_frame = True
     def MapBorder(self):
         border_start = 0
         border_end = 580
@@ -49,12 +65,11 @@ class SnakeEnv():
                 self.SnakeDead(i)
             if not border_end > HeadPosition[0] > border_thickness:
                 self.SnakeDead(i)
-
+    
     def MoveSnakes(self):
 
-        
         for i, snake in enumerate(self.snakes):
-            direction = self.snake_properties[i][2]            
+            direction = self.snake_properties[i][2]
             for index, value in enumerate(snake):
                 try:
                     snake[index] = [
@@ -69,6 +84,7 @@ class SnakeEnv():
                     if direction == "Right":
                         snake[index][0] += 20
             self.current_direction = direction
+
     def DrawSnakes(self):
         for i, val in enumerate(self.snakes):
             snake = val
@@ -79,65 +95,53 @@ class SnakeEnv():
                     next_value = snake[index + 1]
                     if next_value[0] > value[0]:
                         pygame.draw.rect(self.screen, tail_color,
-                                        (value[0] - 8, value[1] - 8, 20, 16))
+                                        (value[0] + 2, value[1] + 2, 20, 16))
                     elif next_value[0] < value[0]:
                         pygame.draw.rect(self.screen, tail_color,
-                                        (value[0] - 12, value[1] - 8, 20, 16))
+                                        (value[0] - 2, value[1] + 2, 20, 16))
                     elif next_value[1] > value[1]:
                         pygame.draw.rect(self.screen, tail_color,
-                                        (value[0] - 8, value[1] - 8, 16, 20))
+                                        (value[0] + 2, value[1] + 2, 16, 20))
                     elif next_value[1] < value[1]:
                         pygame.draw.rect(self.screen, tail_color,
-                                        (value[0] - 8, value[1] - 12, 16, 20))
+                                        (value[0] + 2, value[1] - 2, 16, 20))
                 except:
                     pygame.draw.rect(self.screen, head_color,
-                                    (value[0] - 8, value[1] - 8, 16, 16))
-    def KeyPressed(self):
-        if keyboard.is_pressed('w'):
-            print("Left")
-            
+                                    (value[0]  + 2, value[1] +2, 16, 16))
+
     def GameLoop(self):
-        fps = 10
-        frametime = 1/fps
-        t = time.time()
+        # fps = 10
+        # frametime = 1/fps
+        # t = time.time()
         while self.running:
-            
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
-                key_input = pygame.key.get_pressed()
-                if key_input[pygame.K_UP]:
-                    self.direction = "Up"
-                    print('pressed')
-                elif key_input[pygame.K_DOWN]:
-                    self.direction = "Down"
-                    print('pressed')
-                elif key_input[pygame.K_RIGHT]:
-                    self.direction = "Right"
-                    print('pressed')
-                elif key_input[pygame.K_LEFT]:
-                    self.direction = "Left" 
-                    print('pressed')
-            if time.time() - t >= frametime:
+            if self.next_frame:
+                self.next_frame = False
+            # if time.time() - t >= frametime:
                 self.screen.fill((0, 0, 0))
-                
-                
+
                 self.MapBorder()
-          
+
                 self.DrawSnakes()
                 self.MoveSnakes()
-      
+                self.data = pygame.image.tostring(self.screen, "RGB")
 
                 pygame.display.flip()
-                t = time.time()
+                # t = time.time()
+
     def SnakeDead(self, snake_index):
         pass
         # self.snakes[snake_index] = random.randint(5, 25) * 20
-    def Direction(self, snake_index, direction="Keyboard"):
-        if direction != "Keyboard":
-            self.snake_properties[snake_index][2] = direction
-        else:
-            self.snake_properties[snake_index][2] = self.KeyPressed()
+
+    def Direction(self, snake_index, direction):
+
+        self.snake_properties[snake_index][2] = direction
+    def Food(self):
+        pass
+
 
 class Snake():
     """
@@ -163,7 +167,6 @@ class Snake():
         self.food_pos = []
         self.direction = "Up"
         self.current_direction = self.direction
-
 
         self.enemy_snake = []
 
@@ -198,7 +201,7 @@ class Snake():
                 self.MapBorder()
 
                 self.DrawSnake(self.snake, self.blue, self.yellow)
-                
+
                 self.Food()
                 self.GetTailHit()
 
@@ -224,8 +227,7 @@ class Snake():
             except:
                 pygame.draw.rect(self.screen, head_color,
                                  (value[0] - 8, value[1] - 8, 16, 16))
-    
-    
+
     def SnakeDead(self):
         self.snake = [[300, 300], [320, 300]]
 
@@ -264,7 +266,7 @@ class Snake():
                 if self.direction == "Right":
                     self.snake[index][0] += 20
         self.current_direction = self.direction
-    
+
     def Food(self):
 
         while not self.food_pos:
@@ -282,41 +284,23 @@ class Snake():
     def GetTailHit(self):
         if self.HeadPosition in self.snake[:-1] or self.HeadPosition in self.enemy_snake:
             self.SnakeDead()
-def on_press(key):
-    try:
-        print('alphanumeric key {0} pressed'.format(
-            key.char))
-    except AttributeError:
-        print('special key {0} pressed'.format(
-            key))
 
-def on_release(key):
-    print('{0} released'.format(
-        key))
-    if key == keyboard.Key.esc:
-        # Stop listener
-        return False
-def keyboardInput():
-    listener = keyboard.Listener(
-    on_press=on_press,
-    on_release=on_release)
-    listener.start()
+
+
+
 
 if __name__ == "__main__":
-    
-    se = SnakeEnv()
-    
-    se.AddSnake([255,255,0],[255,0,255])
-    se.AddSnake([0,255,0],[0,255,255])
-    
-    
-    gl = threading.Thread(target=se.GameLoop, args=())
-    gl.start()
-    
-    while True:
-        print("True")
-        if keyboard.read_key() == "x":
-            pass
-        # se.Direction(0)
 
+    se = SnakeEnv() #Creating the Snake Enviorment
 
+    se.AddSnake([255, 255, 0], [255, 0, 255]) #Snake 0
+    se.AddSnake([0, 255, 0], [0, 255, 255]) #Snake 1
+
+    
+
+    for i in range(1):
+        se.Direction(0, "Left")
+        se.NextFrame()
+        Image = se.GetFrame()
+        time.sleep(0.4)
+        

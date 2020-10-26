@@ -4,14 +4,12 @@ import time
 import threading
 import numpy as np
 from PIL import Image
-from PIL import ImageDraw
 
 
 class SnakeEnv():
     def __init__(self):
         self.green = (0, 255, 0)
-        self.yellow = (255, 255, 0)
-        self.blue = (0, 0, 255)
+        self.red = (255, 0, 0)
         pygame.init()
         self.screen = pygame.display.set_mode((600, 600))
 
@@ -26,15 +24,39 @@ class SnakeEnv():
         self.next_frame = False
         self.reward = 1.0
         self.data = pygame.image.tostring(self.screen, "RGB")
-        gl = threading.Thread(target=self.GameLoop, args=())
-        gl.start()
+        self.gl = threading.Thread(target=self.GameLoop, args=())
+        self.gl.start()
+
+    def spawnPos(self):
+        not_in_other_snake = False
+        x = 0
+        y = 0
+        while True:
+            if not_in_other_snake:
+                not_in_other_snake = False
+                break
+            x = random.randint(1, 27) * 20
+            y = random.randint(1, 28) * 20
+            if not self.snakes:
+                not_in_other_snake = True
+            for i, snake in enumerate(self.snakes):
+
+                if not [x, y] in snake and not [x+20, y] in snake and not [x+20, y] in self.food_pos:
+                    if i + 1 == len(self.snakes):
+                        not_in_other_snake = True
+                else:
+                    not_in_other_snake = False
+                    break
+        return [[x, y], [x+20, y]]
 
     def AddSnake(self, head_color, tail_color):
-        self.snake_properties.append([head_color, tail_color, "Down"])
+        self.snake_properties.append([head_color, tail_color, "Down", 0.0])
 
-        x = random.randint(5, 25) * 20
-        y = random.randint(5, 25) * 20
-        self.snakes.append([[x, y], [x+20, y]])
+        self.snakes.append(self.spawnPos())
+
+    def Exit(self):
+        self.running = False
+        self.gl.join()
 
     def GetFrame(self):
         frame = Image.frombytes("RGB", (600, 600), self.data)
@@ -43,9 +65,10 @@ class SnakeEnv():
         output_image = frame_array.tolist()
         return output_image
 
-    def GetReward(self):
-        pass
-
+    def GetReward(self, snake_index):
+        return self.snake_properties[snake_index][3]
+    def AddReward(self, snake_index, reward):
+        self.snake_properties[snake_index][3] = reward
     def NextFrame(self):
         self.next_frame = True
 
@@ -62,12 +85,14 @@ class SnakeEnv():
                                                    border_start, border_thickness, border_end))
         pygame.draw.rect(self.screen, self.green, (border_start,
                                                    border_end, border_end + border_thickness, border_thickness))
-        for i, val in enumerate(self.snakes):
-            HeadPosition = val[-1]
+        for i, snake in enumerate(self.snakes):
+            HeadPosition = snake[-1]
 
             if not border_end > HeadPosition[1] > border_thickness:
+                self.AddReward(i, -1.0)
                 self.SnakeDead(i)
             if not border_end > HeadPosition[0] > border_thickness:
+                self.AddReward(i, -1.0)
                 self.SnakeDead(i)
 
     def MoveSnakes(self):
@@ -126,37 +151,73 @@ class SnakeEnv():
                 self.next_frame = False
             # if time.time() - t >= frametime:
                 self.screen.fill((0, 0, 0))
-
+                for index, val in enumerate(self.snake_properties):
+                    self.AddReward(index, 0.0)
                 self.MapBorder()
 
                 self.DrawSnakes()
                 self.MoveSnakes()
+                self.Food()
+                self.TailHit()
                 self.data = pygame.image.tostring(self.screen, "RGB")
 
                 pygame.display.flip()
                 # t = time.time()
 
     def SnakeDead(self, snake_index):
-        pass
-        # self.snakes[snake_index] = random.randint(5, 25) * 20
+        self.snakes[snake_index] = self.spawnPos()
 
     def Direction(self, snake_index, direction):
-
-        self.snake_properties[snake_index][2] = direction
+        if self.snake_properties[snake_index][2] == "Up" and direction != "Down":
+            self.snake_properties[snake_index][2] = direction
+        elif self.snake_properties[snake_index][2] == "Down" and direction != "Up":
+            self.snake_properties[snake_index][2] = direction
+        elif self.snake_properties[snake_index][2] == "Left" and direction != "Right":
+            self.snake_properties[snake_index][2] = direction
+        elif self.snake_properties[snake_index][2] == "Right" and direction != "Left":
+            self.snake_properties[snake_index][2] = direction
 
     def Food(self):
-        pass
 
+        for index, snake in enumerate(self.snakes):
+            HeadPosition = snake[-1]
+            if HeadPosition == self.food_pos:
+                self.AddReward(index, 1.0)
+                self.food_pos = []
+                self.snakes[index].insert(0, self.snakes[index][0])
+        if not self.food_pos:
+            self.food_pos = self.spawnPos()[0]
+        pygame.draw.rect(self.screen, self.red,
+                         (self.food_pos[0] + 2, self.food_pos[1] + 2, 16, 16))
+
+    def TailHit(self):
+        for index, snake in enumerate(self.snakes):
+            HeadPosition = snake[-1]
+            if HeadPosition in snake[:-1]:
+                self.SnakeDead(index)
+                self.AddReward(index, -1.0)
+            for i,s in enumerate(self.snakes):
+                if i != index:
+                    if HeadPosition in s:
+                        self.AddReward(i,2.0)
+                        self.AddReward(index, -1.0)
+                        self.SnakeDead(index)
+                        
 
 if __name__ == "__main__":
 
-    se = SnakeEnv()  # Creating the Snake Enviorment
+    SEnv = SnakeEnv()  # Creating the Snake Enviorment
 
-    se.AddSnake([255, 255, 0], [255, 0, 255])  # Snake 0
-    se.AddSnake([0, 255, 0], [0, 255, 255])  # Snake 1
+    SEnv.AddSnake([255, 255, 0], [255, 0, 255])  # Snake 0
+    for i in range(100):
+        SEnv.AddSnake([0, 255, 0], [0, 255, 255])  # Snake 1
+    move = "Up"
+    for i in range(10000):
 
-    for i in range(1):
-        se.Direction(0, "Left")
-        se.NextFrame()
-        Image = se.GetFrame()
-        time.sleep(0.4)
+        SEnv.Direction(1, "Left")
+        SEnv.Direction(0, "Right")
+        print(SEnv.GetReward(0))
+        SEnv.NextFrame()
+        image = SEnv.GetFrame()
+        time.sleep(2)
+    SEnv.Exit()

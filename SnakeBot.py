@@ -88,10 +88,10 @@ class SnakeEnv():
         for i, snake in enumerate(self.snakes):
             HeadPosition = snake[-1]
 
-            if not border_end > HeadPosition[1] > border_thickness:
+            if not border_end > HeadPosition[1] > 0:
                 self.AddReward(i, -1.0)
                 self.SnakeDead(i)
-            if not border_end > HeadPosition[0] > border_thickness:
+            if not border_end > HeadPosition[0] > 0:
                 self.AddReward(i, -1.0)
                 self.SnakeDead(i)
 
@@ -209,8 +209,8 @@ if __name__ == "__main__":
     SEnv = SnakeEnv()  # Creating the Snake Enviorment
 
     SEnv.AddSnake([255, 255, 0], [255, 0, 255])  # Snake 0
-    for i in range(100):
-        SEnv.AddSnake([0, 255, 0], [0, 255, 255])  # Snake 1
+    SEnv.AddSnake([0, 255, 0], [0, 255, 255])  # Snake 1
+    
     move = "Up"
     for i in range(10000):
 
@@ -219,5 +219,5 @@ if __name__ == "__main__":
         print(SEnv.GetReward(0))
         SEnv.NextFrame()
         image = SEnv.GetFrame()
-        time.sleep(2)
+        time.sleep(0.01)
     SEnv.Exit()

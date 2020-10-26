@@ -1,6 +1,5 @@
 import pygame
 import random
-import time
 import threading
 import numpy as np
 from PIL import Image
@@ -135,9 +134,6 @@ class SnakeEnv():
                                      (value[0] + 2, value[1] + 2, 16, 16))
 
     def GameLoop(self):
-        # fps = 10
-        # frametime = 1/fps
-        # t = time.time()
         while self.running:
 
             for event in pygame.event.get():
@@ -145,7 +141,7 @@ class SnakeEnv():
                     self.running = False
             if self.next_frame:
                 self.next_frame = False
-            # if time.time() - t >= frametime:
+
                 self.screen.fill((0, 0, 0))
                 for index, val in enumerate(self.snake_properties):
                     self.AddReward(index, 0.0)
@@ -157,7 +153,6 @@ class SnakeEnv():
                 self.data = pygame.image.tostring(self.screen, "RGB")
 
                 pygame.display.flip()
-                # t = time.time()
 
     def SnakeDead(self, snake_index):
         self.snakes[snake_index] = self.spawnPos()
@@ -206,12 +201,11 @@ if __name__ == "__main__":
     SEnv.AddSnake([255, 255, 0], [255, 0, 255])  # Snake 0
     SEnv.AddSnake([0, 255, 0], [0, 255, 255])  # Snake 1
 
-    for i in range(10000):
+    for i in range(100): #Runs for 100 Frames
 
-        SEnv.Direction(1, "Left")
-        SEnv.Direction(0, "Down")
-        print(SEnv.GetReward(0))
-        SEnv.NextFrame()
-        image = SEnv.GetFrame()
-        time.sleep(0)
-    SEnv.Exit()
+        SEnv.Direction(1, "Left")  # Snake 1 Direction = Left
+        SEnv.Direction(0, "Down")  # Snake 0 Direction = Down
+        print(SEnv.GetReward(0))  # Reward of Snake 0
+        SEnv.NextFrame()  # Loads the NextFrame
+        image = SEnv.GetFrame()  # Get the Current Frame 30x30
+    SEnv.Exit()  # Exits the Environment

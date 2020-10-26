@@ -67,31 +67,27 @@ class SnakeEnv():
 
     def GetReward(self, snake_index):
         return self.snake_properties[snake_index][3]
+
     def AddReward(self, snake_index, reward):
         self.snake_properties[snake_index][3] = reward
+
     def NextFrame(self):
         self.next_frame = True
 
     def MapBorder(self):
         border_start = 0
         border_end = 580
-        border_thickness = 20
 
         pygame.draw.rect(self.screen, self.green, (border_start,
-                                                   border_start, border_end, border_thickness))
-        pygame.draw.rect(self.screen, self.green, (border_start,
-                                                   border_start, border_thickness, border_end))
-        pygame.draw.rect(self.screen, self.green, (border_end,
-                                                   border_start, border_thickness, border_end))
-        pygame.draw.rect(self.screen, self.green, (border_start,
-                                                   border_end, border_end + border_thickness, border_thickness))
+                                                   border_start, border_end + 20, border_end + 20), 40)
+
         for i, snake in enumerate(self.snakes):
             HeadPosition = snake[-1]
 
-            if not border_end > HeadPosition[1] > 0:
+            if not border_end > HeadPosition[1] > border_start:
                 self.AddReward(i, -1.0)
                 self.SnakeDead(i)
-            if not border_end > HeadPosition[0] > 0:
+            if not border_end > HeadPosition[0] > border_start:
                 self.AddReward(i, -1.0)
                 self.SnakeDead(i)
 
@@ -153,10 +149,9 @@ class SnakeEnv():
                 self.screen.fill((0, 0, 0))
                 for index, val in enumerate(self.snake_properties):
                     self.AddReward(index, 0.0)
-                self.MapBorder()
-
-                self.DrawSnakes()
                 self.MoveSnakes()
+                self.MapBorder()
+                self.DrawSnakes()
                 self.Food()
                 self.TailHit()
                 self.data = pygame.image.tostring(self.screen, "RGB")
@@ -196,13 +191,13 @@ class SnakeEnv():
             if HeadPosition in snake[:-1]:
                 self.SnakeDead(index)
                 self.AddReward(index, -1.0)
-            for i,s in enumerate(self.snakes):
+            for i, s in enumerate(self.snakes):
                 if i != index:
                     if HeadPosition in s:
-                        self.AddReward(i,2.0)
+                        self.AddReward(i, 2.0)
                         self.AddReward(index, -1.0)
                         self.SnakeDead(index)
-                        
+
 
 if __name__ == "__main__":
 
@@ -210,14 +205,13 @@ if __name__ == "__main__":
 
     SEnv.AddSnake([255, 255, 0], [255, 0, 255])  # Snake 0
     SEnv.AddSnake([0, 255, 0], [0, 255, 255])  # Snake 1
-    
-    move = "Up"
+
     for i in range(10000):
 
         SEnv.Direction(1, "Left")
-        SEnv.Direction(0, "Right")
+        SEnv.Direction(0, "Down")
         print(SEnv.GetReward(0))
         SEnv.NextFrame()
         image = SEnv.GetFrame()
-        time.sleep(0.01)
+        time.sleep(0)
     SEnv.Exit()

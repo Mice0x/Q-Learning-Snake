@@ -3,7 +3,7 @@ import random
 import threading
 import numpy as np
 from PIL import Image
-
+import time
 
 class SnakeEnv():
     def __init__(self):
@@ -192,7 +192,21 @@ class SnakeEnv():
                         self.AddReward(i, 2.0)
                         self.AddReward(index, -1.0)
                         self.SnakeDead(index)
-
+class Keys:
+    def __init__(self):
+        self.keypressed = "Down"
+    def GetArrowKeyInput(self):
+        for event in pygame.event.get():
+            key_input = pygame.key.get_pressed()
+            if key_input[pygame.K_UP]:
+                self.keypressed = "Up"
+            elif key_input[pygame.K_DOWN]:
+                self.keypressed = "Down"
+            elif key_input[pygame.K_RIGHT]:
+                self.keypressed = "Right"
+            elif key_input[pygame.K_LEFT]:
+                self.keypressed = "Left"
+        return self.keypressed
 
 if __name__ == "__main__":
 
@@ -200,12 +214,13 @@ if __name__ == "__main__":
 
     SEnv.AddSnake([255, 255, 0], [255, 0, 255])  # Snake 0
     SEnv.AddSnake([0, 255, 0], [0, 255, 255])  # Snake 1
-
-    for i in range(100): #Runs for 100 Frames
-
-        SEnv.Direction(1, "Left")  # Snake 1 Direction = Left
+    k = Keys()
+    for i in range(1000): #Runs for 100 Frames
+        key_pressed = k.GetArrowKeyInput()
+        SEnv.Direction(1, key_pressed)  # Snake 1 Direction = Left
         SEnv.Direction(0, "Down")  # Snake 0 Direction = Down
         print(SEnv.GetReward(0))  # Reward of Snake 0
         SEnv.NextFrame()  # Loads the NextFrame
         image = SEnv.GetFrame()  # Get the Current Frame 30x30
+        time.sleep(0.1)
     SEnv.Exit()  # Exits the Environment
